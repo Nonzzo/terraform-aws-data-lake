@@ -40,3 +40,7 @@ __pycache__/
 # OS generated files
 .DS_Store
 Thumbs.db
+
+#temporarily restrict the staging and prod ci-cd
+terraform-ci-cd-prod.yml
+terraform-ci-cd-staging.yml
