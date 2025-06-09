@@ -48,8 +48,7 @@ jobs:
           role-session-name: GitHubActionsTerraformSession
           aws-region: us-east-1
 
-      # - name: Terraform fmt check
-      #   run: terraform fmt -check -diff ./environments/dev
+
 
       - name: Terraform Init
         id: init
