@@ -16,6 +16,7 @@ resource "aws_iam_openid_connect_provider" "github_actions" {
   tags = var.common_tags
 }
 
+
 # Create the IAM Role for GitHub Actions
 resource "aws_iam_role" "github_actions_role" {
   name = "${var.role_name_prefix}-${var.environment}"
@@ -33,8 +34,13 @@ resource "aws_iam_role" "github_actions_role" {
         Condition = {
           StringEquals = {
             "token.actions.githubusercontent.com:aud" : "sts.amazonaws.com"
-            # Restrict by repository and branch for security
-            "token.actions.githubusercontent.com:sub" : "repo:${var.github_repository}:ref:refs/heads/${var.github_branch}"
+          }
+          StringLike = {
+            # Allow both push to develop branch and pull requests targeting develop
+            "token.actions.githubusercontent.com:sub" : [
+              "repo:${var.github_repository}:ref:refs/heads/${var.github_branch}",
+              "repo:${var.github_repository}:pull_request"
+            ]
           }
         }
       },
