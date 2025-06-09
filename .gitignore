@@ -1,0 +1,42 @@
+ignore
+# Terraform files
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*-override.tf
+*-override.tf.json
+.terraformrc
+terraform.rc
+
+# AWS credentials (should not be committed)
+credentials
+.aws/credentials
+
+# Local development files
+*.tfvars.json # If you use JSON var files
+*.env # Environment variable files
+*.tfvars # Terraform variable files
+
+# Sensitive files (if any)
+*.pem
+*.key
+
+# IDE specific files (VS Code example)
+.vscode/
+
+# Compiled code/packages (if applicable, e.g., for Lambda functions)
+dist/
+build/
+package/
+node_modules/
+__pycache__/
+*.pyc
+
+# OS generated files
+.DS_Store
+Thumbs.db
