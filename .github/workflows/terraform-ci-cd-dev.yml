@@ -44,7 +44,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: "arn:aws:iam::713881790611:role/GitHubActionsTerraformRole-dev" # Replace with your IAM Role ARN
+          role-to-assume: arn:aws:iam::713881790611:role/GitHubActionsTerraformRole-dev # Replace with your IAM Role ARN
           role-session-name: GitHubActionsTerraformSession
           aws-region: ${{ env.AWS_REGION }}
 
