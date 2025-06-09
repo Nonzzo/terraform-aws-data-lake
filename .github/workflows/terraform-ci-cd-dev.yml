@@ -54,7 +54,7 @@ jobs:
       - name: Terraform Init
         id: init
         working-directory: ./environments/dev
-        run: terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET_DEV }}" -backend-config="key=data-lake/dev/terraform.tfstate" -backend-config="region=us-east-1" -backend-config="dynamodb_table=${{ secrets.TF_LOCK_TABLE_DEV }}"
+        run: terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET_DEV }}" -backend-config="key=dev/terraform.tfstate" -backend-config="region=us-east-1" -backend-config="dynamodb_table=${{ secrets.TF_LOCK_TABLE_DEV }}"
 
       - name: Terraform Validate
         id: validate
