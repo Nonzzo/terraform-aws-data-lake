@@ -135,6 +135,22 @@ module "glue_processing" {
       s3_targets    = [{ path = "s3://${module.s3_storage.bucket_ids.raw}/input/" }]
       schedule      = "cron(0 1 * * ? *)" # Daily at 1 AM UTC
     }
+
+    # --- NEW CRAWLER FOR PROCESSED DATA ---
+    "processed_data_crawler" = {
+      database_name = "processed_db" # Puts table in the processed database
+      s3_targets    = [{ path = "s3://${module.s3_storage.bucket_ids.processed}/output/" }] # Points to the output of your ETL job
+      schedule      = "cron(0 2 * * ? *)" # Runs an hour after the raw crawler
+      configuration = jsonencode({
+        Version = 1.0,
+        CrawlerOutput = {
+          Partitions = { AddOrUpdateBehavior = "InheritFromTable" }
+        },
+        Grouping = {
+          TableGroupingPolicy = "CombineCompatibleSchemas"
+        }
+      })
+    }
   }
 
   glue_jobs = {
