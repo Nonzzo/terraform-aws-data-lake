@@ -32,7 +32,7 @@ resource "aws_iam_role" "github_actions_role" {
         }
         Action = "sts:AssumeRoleWithWebIdentity"
         Condition = {
-          StringEquals = {
+          StringLike = {
             "token.actions.githubusercontent.com:aud" : "sts.amazonaws.com"
           }
           StringLike = {
@@ -51,7 +51,7 @@ resource "aws_iam_role" "github_actions_role" {
 }
 
 # Define the IAM Policy for the role 
-# This policy should grant permissions required by your main data lake Terraform code
+# This policy should grant permissions required by your main data lake Terraform code.
 resource "aws_iam_policy" "github_actions_policy" {
   name        = "${var.policy_name_prefix}-${var.environment}"
   description = "Policy for GitHub Actions to deploy the data lake infrastructure"
