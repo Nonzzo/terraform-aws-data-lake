@@ -167,6 +167,23 @@ module "glue_processing" {
       }
     }
   }
+
+  triggers = {
+    "trigger_etl_on_raw_crawl" = {
+      type = "CONDITIONAL"
+      actions = [{
+        job_name  = "sample_etl_job"
+        # Pass the table name discovered by the crawler to the job at runtime
+        arguments = { "--source_table" = "input" } # Assuming the crawler creates a table named 'input'
+      }]
+      predicate = {
+        conditions = [{
+          crawler_name = "raw_data_crawler"
+          state        = "SUCCEEDED"
+        }]
+      }
+    }
+  }
 }
 
 module "lambda_processing" {

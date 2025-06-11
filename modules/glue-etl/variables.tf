@@ -74,3 +74,29 @@ variable "glue_scripts_s3_bucket_id" {
   type        = string
   description = "ID of the S3 bucket where Glue job scripts are stored."
 }
+
+#  Trigger Variables ---
+variable "triggers" {
+  type = map(object({
+    type          = string # ON_DEMAND | SCHEDULED | CONDITIONAL
+    description   = optional(string)
+    schedule      = optional(string) # For SCHEDULED triggers
+    actions = list(object({
+      job_name    = string
+      arguments   = optional(map(string))
+      timeout     = optional(number)
+    }))
+    predicate = optional(object({ # For CONDITIONAL triggers
+      conditions = list(object({
+        job_name      = optional(string) # Name of job to watch
+        crawler_name  = optional(string) # Name of crawler to watch
+        state         = string # SUCCEEDED, FAILED, TIMEOUT, STOPPED
+        logical_operator = optional(string, "EQUALS") # EQUALS
+      }))
+      logical = optional(string, "AND") # AND | ANY
+    }))
+    start_on_creation = optional(bool, true)
+  }))
+  description = "A map of Glue Triggers to create. Keys are logical names for the triggers."
+  default     = {}
+}
