@@ -23,15 +23,15 @@ resource "aws_glue_trigger" "this" {
     content {
       logical = lookup(predicate.value, "logical", "AND") # Default to AND
 
-      # Alternative dynamic conditions block using count
+      # Correct dynamic conditions block using for_each
       dynamic "conditions" {
-        count = length(predicate.value.conditions) # Iterate based on the number of conditions
+        for_each = predicate.value.conditions # Iterate over the list of conditions
         content {
-          # Access values using the count index
-          job_name         = lookup(predicate.value.conditions[count.index], "job_name", null)
-          crawler_name     = lookup(predicate.value.conditions[count.index], "crawler_name", null)
-          state            = predicate.value.conditions[count.index].state # Access state by index
-          logical_operator = lookup(predicate.value.conditions[count.index], "logical_operator", "EQUALS") # Default to EQUALS
+          # Access values using the iteration variable name (conditions.value)
+          job_name         = lookup(conditions.value, "job_name", null)
+          crawler_name     = lookup(conditions.value, "crawler_name", null)
+          state            = conditions.value.state # Access the state value
+          logical_operator = lookup(conditions.value, "logical_operator", "EQUALS") # Default to EQUALS
           # Add other condition attributes if needed
         }
       }
