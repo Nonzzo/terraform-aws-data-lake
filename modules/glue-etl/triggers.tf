@@ -1,34 +1,36 @@
 resource "aws_glue_trigger" "this" {
-  for_each = var.triggers
+  for_each = var.triggers # Iterate over the map of triggers
 
-  name              = "${each.key}-${var.environment}"
-  description       = each.value.description
-  type              = each.value.type
-  schedule          = each.value.schedule
-  start_on_creation = each.value.start_on_creation
-  enabled           = true # You can make this configurable
+  name        = "${each.key}-${var.environment}"
+  type        = each.value.type
+  description = lookup(each.value, "description", null)
+  schedule    = lookup(each.value, "schedule", null)
+  start_on_creation = lookup(each.value, "start_on_creation", true) # Default to true
 
   dynamic "actions" {
     for_each = each.value.actions
     content {
-      job_name  = "${actions.value.job_name}-${var.environment}"
-      arguments = actions.value.arguments
-      timeout   = actions.value.timeout
+      job_name = actions.value.job_name
+      arguments = lookup(actions.value, "arguments", null)
+      timeout = lookup(actions.value, "timeout", null)
+      # Add other action attributes if needed
     }
   }
 
   dynamic "predicate" {
-    for_each = each.value.predicate != null ? [each.value.predicate] : []
+    # Only create predicate block if the trigger type is CONDITIONAL and predicate is defined in the variable
+    for_each = each.value.type == "CONDITIONAL" && each.value.predicate != null ? [each.value.predicate] : []
     content {
-      logical = predicate.value.logical
+      logical = lookup(predicate.value, "logical", "AND") # Default to AND
 
       dynamic "conditions" {
-        for_each = predicate.value.conditions
+        for_each = predicate.value.conditions # Iterate over the list of conditions
         content {
-          job_name         = conditions.value.job_name != null ? "${conditions.value.job_name}-${var.environment}" : null
-          crawler_name     = conditions.value.crawler_name != null ? "${conditions.value.crawler_name}-${var.environment}" : null
-          state            = conditions.value.state
-          logical_operator = conditions.value.logical_operator
+          job_name         = lookup(conditions.value, "job_name", null)
+          crawler_name     = lookup(conditions.value, "crawler_name", null)
+          state            = conditions.value.state # Read the state value from the variable
+          logical_operator = lookup(conditions.value, "logical_operator", "EQUALS") # Default to EQUALS
+          # Add other condition attributes if needed
         }
       }
     }
@@ -39,6 +41,12 @@ resource "aws_glue_trigger" "this" {
   })
 
   # Ensure the jobs and crawlers being referenced exist before creating the trigger
+  # This depends_on might need to be more specific if you have multiple jobs/crawlers
+  # For a single job/crawler referenced by the trigger, this might be okay.
+  # If the trigger watches a specific job/crawler, depends_on should reference that specific resource instance.
+  # Example: depends_on = [aws_glue_job.this[actions.value.job_name], aws_glue_crawler.this[conditions.value.crawler_name]]
+  # However, the current depends_on refers to the entire map resource, which is less precise but often works.
+  # Let's keep the current depends_on for now as the error is not dependency related.
   depends_on = [
     aws_glue_job.this,
     aws_glue_crawler.this
