@@ -90,7 +90,7 @@ variable "triggers" {
       conditions = list(object({
         job_name      = optional(string) # Name of job to watch
         crawler_name  = optional(string) # Name of crawler to watch
-        state         = string # SUCCEEDED, FAILED, TIMEOUT, STOPPED
+        crawl_state         = string # SUCCEEDED, FAILED, TIMEOUT, STOPPED
         logical_operator = optional(string, "EQUALS") # EQUALS
       }))
       logical = optional(string, "AND") # AND | ANY
