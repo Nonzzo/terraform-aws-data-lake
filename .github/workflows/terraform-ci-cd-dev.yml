@@ -19,7 +19,7 @@ on:
 env:
   AWS_REGION: us-east-1 # Set your desired AWS region
   TF_ENV_DIR: 'environments/dev'
-  TF_VAR_FILE: 'dev.tfvars' # Assuming your var file is named terraform.tfvars in the env dir
+  TF_VAR_FILE: 'dev.tfvars' # Assuming your var file is named dev.tfvars in the env dir
 
 jobs:
   terraform: # Single job for dev environment workflow

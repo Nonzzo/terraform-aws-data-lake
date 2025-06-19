@@ -20,7 +20,7 @@ credentials
 # Local development files
 *.tfvars.json # If you use JSON var files
 *.env # Environment variable files
-*.tfvars # Terraform variable files
+
 
 # Sensitive files (if any)
 *.pem
@@ -43,6 +43,5 @@ Thumbs.db
 
 #temporarily restrict the staging and prod ci-cd
 terraform-ci-cd-prod.yml
-terraform-ci-cd-staging.yml
 users.csv
 sample_etl_job.py
