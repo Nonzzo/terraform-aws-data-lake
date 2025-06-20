@@ -49,7 +49,9 @@ jobs:
           role-session-name: GitHubActionsTerraformSession-Staging
           aws-region: ${{ env.AWS_REGION }}
 
-
+      - name: Upload Glue ETL Script
+        run: |
+          aws s3 cp ./sample_etl_job.py s3://nonso-data-lake-glue-assets-staging/scripts/sample_etl_job.py
       - name: Terraform Init
         id: init
         working-directory: ${{ env.TF_ENV_DIR }}
