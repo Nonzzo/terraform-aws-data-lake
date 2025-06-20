@@ -178,7 +178,7 @@ module "glue_processing" {
       }]
       predicate = {
         conditions = [{
-          crawler_name = "raw_data_crawler"
+          crawler_name = "raw_data_crawler-staging"
           crawl_state = "SUCCEEDED"
           logical_operator = "EQUALS"
         }]
