@@ -234,11 +234,17 @@ resource "aws_glue_trigger" "start_staging_workflow" {
   name = "start-data-lake-pipeline-staging"
   type = "ON_DEMAND"
 
-  actions {
-    # The action is to start the workflow
-    workflow_name = aws_glue_workflow.staging_pipeline.name
-  }
+  
+  # Link the trigger to the workflow using the top-level workflow_name argument
+  workflow_name = aws_glue_workflow.staging_pipeline.name
 
+  # Add an actions block specifying the first component to run
+  # This tells the workflow which crawler/job to start first when triggered
+  actions {
+    # Specify the name of the first crawler the workflow should start
+    # Assuming your glue_processing module outputs a map of crawlers named 'glue_crawlers'
+    crawler_name = module.glue_processing.glue_crawlers["raw_data_crawler"].name
+  }
   # Ensure the trigger is active upon creation
   start_on_creation = true
 
