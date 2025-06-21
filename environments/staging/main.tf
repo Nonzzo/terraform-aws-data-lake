@@ -245,8 +245,7 @@ resource "aws_glue_trigger" "start_staging_workflow" {
     # Assuming your glue_processing module outputs a map of crawlers named 'glue_crawlers'
     crawler_name = module.glue_processing.glue_crawlers["raw_data_crawler"].name
   }
-  # Ensure the trigger is active upon creation
-  start_on_creation = true
+  
 
   tags = local.common_tags
 }
