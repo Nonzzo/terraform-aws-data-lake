@@ -221,37 +221,6 @@ module "sagemaker_notebooks" {
   }
 }
 
-# --- NEW: AWS Glue Workflow for Orchestration ---
-resource "aws_glue_workflow" "staging_pipeline" {
-  name        = "data-lake-pipeline-staging"
-  description = "Orchestrates the raw crawl, ETL job, and processed crawl for staging"
-
-  tags = local.common_tags
-  
-}
-
-# --- NEW: On-Demand Trigger to Start the Workflow ---
-resource "aws_glue_trigger" "start_staging_workflow" {
-  name = "start-data-lake-pipeline-staging"
-  type = "ON_DEMAND"
-
-  
-  # Link the trigger to the workflow using the top-level workflow_name argument
-  workflow_name = aws_glue_workflow.staging_pipeline.name
-
-  # Add an actions block specifying the first component to run
-  # This tells the workflow which crawler/job to start first when triggered
-  actions {
-    # Specify the name of the first crawler the workflow should start
-    # Assuming your glue_processing module outputs a map of crawlers named 'glue_crawlers'
-    crawler_name = module.glue_processing.glue_crawlers["raw_data_crawler"].name
-  }
-  
-
-  tags = local.common_tags
-}
-
-// ... existing resources above ...
 
 # --- NEW: AWS Glue Workflow for Orchestration ---
 resource "aws_glue_workflow" "staging_pipeline" {
