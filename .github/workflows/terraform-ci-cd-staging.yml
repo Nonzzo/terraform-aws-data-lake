@@ -1,0 +1,76 @@
+name: 'Terraform CI/CD (Staging) For Data Lake'
+
+on:
+  push:
+    branches:
+      - staging # Trigger on pushes to the staging branch
+    paths:
+      - 'modules/**'
+      - 'environments/staging/**' # Focus on staging environment changes
+      - '.github/workflows/terraform-ci-cd-staging.yml' # Trigger if the workflow file changes
+  pull_request:
+    branches:
+      - staging # Trigger on PRs to the staging branch
+    paths:
+      - 'modules/**'
+      - 'environments/staging/**'
+      - '.github/workflows/terraform-ci-cd-staging.yml'
+
+env:
+  AWS_REGION: us-east-1 # Set your desired AWS region
+  TF_ENV_DIR: 'environments/staging'
+  TF_VAR_FILE: 'staging.tfvars' # Assuming your var file is named staging.tfvars in the env dir
+
+jobs:
+  terraform: # Single job for staging environment workflow
+    name: 'Terraform Plan and Apply (Staging)'
+    runs-on: ubuntu-latest
+    environment: staging 
+
+    # Add permissions for OIDC
+    permissions:
+      id-token: write # This is required for requesting the OIDC token
+      contents: read # This is required for checking out the code
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '~1.5.0' # Match your versions.tf (ensure this matches your project's versions.tf)
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+
+          role-to-assume: arn:aws:iam::713881790611:role/GitHubActionsTerraformRole-staging
+          role-session-name: GitHubActionsTerraformSession-Staging
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Upload Glue ETL Script
+        run: |
+          aws s3 cp ./sample_etl_job.py s3://nonso-data-lake-glue-assets-staging/scripts/sample_etl_job.py
+      - name: Terraform Init
+        id: init
+        working-directory: ${{ env.TF_ENV_DIR }}
+        run: terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET_STAGING }}" -backend-config="key=staging/terraform.tfstate" -backend-config="region=${{ env.AWS_REGION }}" -backend-config="dynamodb_table=${{ secrets.TF_LOCK_TABLE_STAGING }}"
+
+      - name: Terraform Validate
+        id: validate
+        working-directory: ${{ env.TF_ENV_DIR }}
+        run: terraform validate -no-color
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: ${{ env.TF_ENV_DIR }}
+        run: terraform plan -no-color -input=false -var-file=${{ env.TF_VAR_FILE }} -out=tfplan
+
+      # Apply changes only on pushes to the 'staging' branch
+      - name: Terraform Apply
+        id: apply
+        if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
+        working-directory: ${{ env.TF_ENV_DIR }}
+        run: terraform apply -auto-approve -input=false tfplan # Apply the plan generated in the previous step
+
