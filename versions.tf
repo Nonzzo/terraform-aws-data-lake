@@ -1,10 +1,14 @@
 terraform {
-  required_version = ">= 1.7.0" # Specify your desired Terraform version
+  required_version = ">= 1.5.0" # Specify your desired Terraform version
 
   required_providers {
     aws = {
       source  = "hashicorp/aws"
+<<<<<<< Updated upstream
       version = "~>6.0.0" # Specify your desired AWS provider version
+=======
+      version = "~>6.0" # Specify your desired AWS provider version
+>>>>>>> Stashed changes
     }
   }
 
