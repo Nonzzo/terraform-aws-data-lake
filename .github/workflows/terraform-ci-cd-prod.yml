@@ -50,10 +50,10 @@ jobs:
           role-session-name: GitHubActionsTerraformSession-Prod # <--- Changed session name
           aws-region: ${{ env.AWS_REGION }}
 
-    #   - name: Upload Glue ETL Script
-    #     # <--- Upload to the production Glue assets bucket
-    #     run: |
-    #       aws s3 cp ./sample_etl_job.py s3://nonso-data-lake-glue-assets-prod/scripts/sample_etl_job.py # <--- Update bucket name
+      - name: Upload Glue ETL Script
+        # <--- Upload to the production Glue assets bucket
+        run: |
+          aws s3 cp ./sample_etl_job.py s3://nonso-data-lake-glue-assets-prod/scripts/sample_etl_job.py # <--- Update bucket name
         
 
       - name: Terraform Init
