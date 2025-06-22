@@ -227,6 +227,7 @@ resource "aws_glue_workflow" "staging_pipeline" {
   description = "Orchestrates the raw crawl, ETL job, and processed crawl for staging"
 
   tags = local.common_tags
+  
 }
 
 # --- NEW: On-Demand Trigger to Start the Workflow ---
@@ -249,4 +250,95 @@ resource "aws_glue_trigger" "start_staging_workflow" {
 
   tags = local.common_tags
 }
+
+// ... existing resources above ...
+
+# --- NEW: AWS Glue Workflow for Orchestration ---
+resource "aws_glue_workflow" "staging_pipeline" {
+  name        = "data-lake-pipeline-staging"
+  description = "Orchestrates the raw crawl, ETL job, and processed crawl for staging"
+
+  tags = local.common_tags
+
+  # Nodes and connections are defined by the triggers associated with this workflow
+  # No 'nodes' or 'connections' blocks here
+}
+
+# --- NEW: On-Demand Trigger to Start the Workflow ---
+# This trigger starts the workflow and its first component (raw crawler)
+resource "aws_glue_trigger" "start_staging_workflow" {
+  name = "start-data-lake-pipeline-staging"
+  type = "ON_DEMAND"
+
+  # Link this trigger to the workflow
+  workflow_name = aws_glue_workflow.staging_pipeline.name
+
+  # Action: Start the first component (raw crawler)
+  actions {
+    crawler_name = module.glue_processing.glue_crawlers["raw_data_crawler"].name
+  }
+
+  tags = local.common_tags
+}
+
+# --- NEW: Conditional Trigger to Start ETL Job after Raw Crawler Success ---
+# This trigger is part of the workflow and defines the dependency
+resource "aws_glue_trigger" "etl_on_raw_crawl_success" {
+  name = "etl-on-raw-crawl-success-staging" # Unique name for this trigger
+  type = "CONDITIONAL"
+
+  # Link this trigger to the same workflow
+  workflow_name = aws_glue_workflow.staging_pipeline.name
+
+  # Predicate: Watch for the raw crawler to succeed
+  predicate {
+    conditions {
+      # Reference the raw crawler created by the module
+      crawler_name     = module.glue_processing.glue_crawlers["raw_data_crawler"].name
+      crawl_state      = "SUCCEEDED"
+      logical_operator = "EQUALS"
+    }
+  }
+
+  # Action: Start the ETL job
+  actions {
+    # Reference the ETL job created by the module
+    job_name = module.glue_processing.glue_jobs["sample_etl_job"].name
+    # Pass arguments to the job if needed
+    arguments = { "--source_table" = "input" } # Example argument
+  }
+
+  tags = local.common_tags
+}
+
+# --- NEW: Conditional Trigger to Start Processed Crawler after ETL Job Success ---
+# This trigger is part of the workflow and defines the dependency
+resource "aws_glue_trigger" "processed_crawl_on_etl_success" {
+  name = "processed-crawl-on-etl-success-staging" # Unique name for this trigger
+  type = "CONDITIONAL"
+
+  # Link this trigger to the same workflow
+  workflow_name = aws_glue_workflow.staging_pipeline.name
+
+  # Predicate: Watch for the ETL job to succeed
+  predicate {
+    conditions {
+      # Reference the ETL job created by the module
+      job_name         = module.glue_processing.glue_jobs["sample_etl_job"].name
+      state        = "SUCCEEDED"
+      logical_operator = "EQUALS"
+    }
+  }
+
+  # Action: Start the processed crawler
+  actions {
+    # Reference the processed crawler created by the module
+    crawler_name = module.glue_processing.glue_crawlers["processed_data_crawler"].name
+  }
+
+  tags = local.common_tags
+}
+
+
+
 
