@@ -42,5 +42,5 @@ __pycache__/
 Thumbs.db
 
 #temporarily restrict the staging and prod ci-cd
-terraform-ci-cd-prod.yml
+
 users.csv
