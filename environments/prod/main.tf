@@ -101,7 +101,7 @@ module "iam_roles" {
       permissions = ["s3:PutObject"]
     }
   ]
-  # lambda_additional_policy_arns     = ["arn:aws:iam::aws:policy/AmazonSQSFullAccess"] # Example
+  
 
   sagemaker_role_name_prefix          = "sagemaker-datalake"
   sagemaker_s3_bucket_arns_for_read_write = [
@@ -167,25 +167,7 @@ module "glue_processing" {
       }
     }
   }
-
-  triggers = {
-    "trigger_etl_on_raw_crawl" = {
-      type = "CONDITIONAL"
-      actions = [{
-        job_name  = "sample_etl_job"
-        # Pass the table name discovered by the crawler to the job at runtime
-        arguments = { "--source_table" = "input" } # Assuming the crawler creates a table named 'input'
-      }]
-      predicate = {
-        conditions = [{
-          crawler_name = "raw_data_crawler"
-          crawl_state = "SUCCEEDED"
-          logical_operator = "EQUALS"
-        }]
-      }
-    }
   }
-}
 
 module "lambda_processing" {
   source = "../../modules/lambda-functions"
@@ -231,8 +213,85 @@ module "sagemaker_notebooks" {
       name_prefix = "data-science" # Or choose a suitable prefix
       instance_type = "ml.t3.medium"
       volume_size_in_gb = 50
-      # subnet_id = "subnet-xxxxxxxxxxxxxxxxx" # If deploying in VPC
-      # security_group_ids = ["sg-xxxxxxxxxxxxxxxxx"] # If deploying in VPC
+      
     }
   }
 }
+
+
+
+# --- AWS Glue Workflow for Orchestration ---
+resource "aws_glue_workflow" "staging_pipeline" { # Resource name in TF state can remain 'staging_pipeline'
+  name        = "data-lake-pipeline-${local.environment_name}" # <--- Make the actual AWS name dynamic
+  description = "Orchestrates the raw crawl, ETL job, and processed crawl for ${local.environment_name}" # <--- Make description dynamic
+
+  tags = local.common_tags
+}
+
+# --- On-Demand Trigger to Start the Workflow ---
+resource "aws_glue_trigger" "start_staging_workflow" { # Resource name in TF state can remain 'start_staging_workflow'
+  name = "start-data-lake-pipeline-${local.environment_name}" # <--- Make the actual AWS name dynamic
+  type = "ON_DEMAND"
+
+  # Link this trigger to the workflow (this reference is already correct)
+  workflow_name = aws_glue_workflow.staging_pipeline.name
+
+  # Action: Start the first component (raw crawler)
+  actions {
+    crawler_name = module.glue_processing.glue_crawlers["raw_data_crawler"].name
+  }
+
+  tags = local.common_tags
+}
+
+# --- Conditional Trigger to Start ETL Job after Raw Crawler Success ---
+resource "aws_glue_trigger" "etl_on_raw_crawl_success" { # Resource name in TF state can remain 'etl_on_raw_crawl_success'
+  name = "etl-on-raw-crawl-success-${local.environment_name}" # <--- Make the actual AWS name dynamic
+  type = "CONDITIONAL"
+
+  # Link this trigger to the same workflow (this reference is already correct)
+  workflow_name = aws_glue_workflow.staging_pipeline.name
+
+  # Predicate: Watch for the raw crawler to succeed
+  predicate {
+    conditions {
+      crawler_name     = module.glue_processing.glue_crawlers["raw_data_crawler"].name
+      crawl_state      = "SUCCEEDED"
+      logical_operator = "EQUALS"
+    }
+  }
+
+  # Action: Start the ETL job
+  actions {
+    job_name = module.glue_processing.glue_jobs["sample_etl_job"].name
+    arguments = { "--source_table" = "input" } # Example argument
+  }
+
+  tags = local.common_tags
+}
+
+# --- Conditional Trigger to Start Processed Crawler after ETL Job Success ---
+resource "aws_glue_trigger" "processed_crawl_on_etl_success" { # Resource name in TF state can remain 'processed_crawl_on_etl_success'
+  name = "processed-crawl-on-etl-success-${local.environment_name}" # <--- Make the actual AWS name dynamic
+  type = "CONDITIONAL"
+
+  # Link this trigger to the same workflow (this reference is already correct)
+  workflow_name = aws_glue_workflow.staging_pipeline.name
+
+  # Predicate: Watch for the ETL job to succeed
+  predicate {
+    conditions {
+      job_name         = module.glue_processing.glue_jobs["sample_etl_job"].name
+      state        = "SUCCEEDED"
+      logical_operator = "EQUALS"
+    }
+  }
+
+  # Action: Start the processed crawler
+  actions {
+    crawler_name = module.glue_processing.glue_crawlers["processed_data_crawler"].name
+  }
+
+  tags = local.common_tags
+}
+
