@@ -44,3 +44,4 @@ Thumbs.db
 #temporarily restrict the staging and prod ci-cd
 
 users.csv
+README1.md
