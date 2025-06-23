@@ -1,0 +1,81 @@
+name: 'Terraform CI/CD (Production) For Data Lake' # <--- Changed workflow name
+
+on:
+  push:
+    branches:
+      - main # <--- Trigger on pushes to the main branch (or your production branch)
+    paths:
+      - 'modules/**'
+      - 'environments/prod/**' # <--- Focus on production environment changes
+      - '.github/workflows/terraform-ci-cd-prod.yml' # <--- Trigger if this workflow file changes
+  pull_request:
+    branches:
+      - main # <--- Trigger on PRs to the main branch
+    paths:
+      - 'modules/**'
+      - 'environments/prod/**'
+      - '.github/workflows/terraform-ci-cd-prod.yml'
+  workflow_dispatch: # Allows manual triggering of the production workflow
+
+env:
+  AWS_REGION: us-east-1 
+  TF_ENV_DIR: 'environments/prod' # <--- Point to the production environment directory
+  TF_VAR_FILE: 'prod.tfvars' 
+
+jobs:
+  terraform: # Single job for production environment workflow
+    name: 'Terraform Plan and Apply (Production)' 
+    runs-on: ubuntu-latest
+    environment: prod # <--- Link to the production GitHub Environment
+
+    # Add permissions for OIDC
+    permissions:
+      id-token: write # This is required for requesting the OIDC token
+      contents: read # This is required for checking out the code
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '~1.5.0' 
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          # <--- Assume the production-specific IAM role
+          role-to-assume: arn:aws:iam::713881790611:role/GitHubActionsTerraformRole-prod
+          role-session-name: GitHubActionsTerraformSession-Prod # <--- Changed session name
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Upload Glue ETL Script
+        # <--- Upload to the production Glue assets bucket
+        run: |
+          aws s3 cp ./sample_etl_job.py s3://nonso-data-lake-glue-assets-prod/scripts/sample_etl_job.py # <--- Update bucket name
+        
+
+      - name: Terraform Init
+        id: init
+        working-directory: ${{ env.TF_ENV_DIR }}
+        run: terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET_PROD }}" -backend-config="key=prod/terraform.tfstate" -backend-config="region=${{ env.AWS_REGION }}" -backend-config="dynamodb_table=${{ secrets.TF_LOCK_TABLE_PROD }}" 
+
+      - name: Terraform Validate
+        id: validate
+        working-directory: ${{ env.TF_ENV_DIR }}
+        run: terraform validate -no-color
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: ${{ env.TF_ENV_DIR }}
+        run: terraform plan -no-color -input=false -var-file=${{ env.TF_VAR_FILE }} -out=tfplan
+
+      # Apply changes only on pushes to the 'main' branch (or your production branch)
+      - name: Terraform Apply
+        id: apply
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' # <--- Apply on push to main
+        working-directory: ${{ env.TF_ENV_DIR }}
+        # Keep auto-approve. The manual gate is handled by the GitHub Environment protection rules
+        # which will pause the job *before* this step runs.
+        run: terraform apply -auto-approve -input=false tfplan # Apply the plan generated in the previous step
